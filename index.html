@@ -433,7 +433,12 @@ createApp({
           if(!extracted.length)throw new Error("未识别到返回 URL");
           urls = urls.concat(extracted);
         }catch(e){
-          showToast("上传失败 ("+(i+1)+"/"+selectedFiles.value.length+"): "+e.message,"error");
+          var emsg = e.message || "";
+          if(emsg.includes("CORS")||emsg.includes("cross")||emsg.includes("Failed to fetch")||emsg.includes("NetworkError")){
+            showToast("上传失败：PicList-Core CORS 未配置，请允许 "+location.origin+" 来源","error");
+          }else{
+            showToast("上传失败 ("+(i+1)+"/"+selectedFiles.value.length+"): "+emsg,"error");
+          }
           uploading.value = false;
           uploadProgress.value = "";
           return;
@@ -566,9 +571,10 @@ createApp({
       if(!url){showToast("请先填写 PicList-Core 服务地址","error");return}
       testingPic.value=true;testPicOk.value=false;
       try{
-        var r=await fetch(url.replace(/\/+$/,""),{method:"GET"});
-        testPicOk.value=r.ok;
-        showToast(r.ok?"图床服务可达":"图床无响应 ("+r.status+")",r.ok?"":"error");
+        // no-cors 模式：绕过 CORS 检查，只要服务在线即返回成功
+        await fetch(url.replace(/\/+$/,""),{method:"GET",mode:"no-cors"});
+        testPicOk.value=true;
+        showToast("图床服务可达");
       }catch(e){testPicOk.value=false;showToast("图床不可达: "+e.message,"error")}
       testingPic.value=false;
     }
