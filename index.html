@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>炸鱼观察记录</title>
+<title>炸鱼记录</title>
 <style>
   [v-cloak]{display:none}
 
@@ -19,7 +19,7 @@
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   html{background:var(--bg-deep);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;text-wrap:pretty}
   body{min-height:100vh;position:relative;overflow-x:hidden}
-  body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9999;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.04) 2px,rgba(0,0,0,0.04) 4px)}
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9999;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.025) 3px,rgba(0,0,0,0.025) 6px)}
   .grid-bg{position:fixed;inset:0;pointer-events:none;z-index:0;background-image:linear-gradient(rgba(255,70,85,0.022) 1px,transparent 1px),linear-gradient(90deg,rgba(255,70,85,0.022) 1px,transparent 1px);background-size:64px 64px;mask-image:radial-gradient(ellipse 70% 70% at 50% 30%,black 20%,transparent 80%)}
   .container{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:48px var(--gap) 80px}
 
@@ -42,12 +42,13 @@
   .masonry-col{display:flex;flex-direction:column;gap:var(--gap);flex:1;min-width:0}
 
   /* Card */
-  .record-card{background:var(--bg-card);border:1px solid var(--border);position:relative;clip-path:polygon(0% 0%,100% 0%,100% calc(100% - 8px),calc(100% - 8px) 100%,0% 100%,0% 0%);transition:border-color .2s,background .2s;overflow:hidden}
-  .record-card:hover{border-color:var(--border-active);background:var(--bg-card-hover)}
+  @keyframes card-in{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+  .record-card{background:var(--bg-card);border:1px solid var(--border);position:relative;clip-path:polygon(0% 0%,100% 0%,100% calc(100% - 8px),calc(100% - 8px) 100%,0% 100%,0% 0%);transition:border-color .2s,background .2s,transform .2s,box-shadow .2s;overflow:hidden;animation:card-in .4s cubic-bezier(.22,.61,.36,1) both;animation-delay:calc(var(--i,0) * 55ms)}
+  .record-card:hover{border-color:var(--border-active);background:var(--bg-card-hover);transform:translateY(-2px);box-shadow:0 12px 32px rgba(0,0,0,0.5)}
   .record-card::before{content:"";position:absolute;top:0;left:0;width:3px;height:100%;background:var(--red);opacity:0;transition:opacity .2s;z-index:1}
   .record-card:hover::before{opacity:1}
   .card-top{display:flex;align-items:baseline;gap:14px;padding:18px 20px 0;flex-wrap:wrap}
-  .card-date{font-family:var(--font-mono);font-size:11px;color:var(--cyan);letter-spacing:2px;white-space:nowrap;flex-shrink:0}
+  .card-date{font-family:var(--font-mono);font-size:10px;color:var(--cyan);letter-spacing:2px;white-space:nowrap;flex-shrink:0;background:rgba(0,229,255,0.07);padding:3px 8px;border:1px solid rgba(0,229,255,0.12)}
   .card-id{font-size:18px;font-weight:800;color:#fff;letter-spacing:.5px;word-break:break-all;line-height:1.3}
   .card-images{padding:14px 20px 0;display:flex;flex-direction:column;gap:8px}
   .card-img-slot{background:#0d0d15;border:1px dashed rgba(255,255,255,0.08);overflow:hidden;transition:border-color .2s}
@@ -62,9 +63,21 @@
   .img-placeholder .cross::after{left:50%;top:0;bottom:0;width:1px;transform:translateX(-50%)}
   .img-placeholder .cross .ring{position:absolute;inset:3px;border:1px solid var(--steel);border-radius:50%;opacity:.5}
   .img-placeholder span{font-size:10px;letter-spacing:2px}
-  .card-note{padding:12px 20px 18px;font-size:13px;color:var(--steel);line-height:1.7}
+  .card-note{padding:12px 20px 18px;font-size:13px;color:var(--steel);line-height:1.7;text-align:center}
   .card-note:empty{display:none}
-  .empty-state{text-align:center;padding:80px 20px;width:100%;color:var(--text-dim);font-family:var(--font-mono);font-size:13px;letter-spacing:2px;border:1px dashed rgba(255,255,255,0.06)}
+  .card-badge{position:absolute;top:0;right:0;z-index:2;font-family:var(--font-mono);font-size:10px;font-weight:900;letter-spacing:3px;padding:5px 10px 5px 12px;clip-path:polygon(0 0,100% 0,100% 100%,6px 100%,0 calc(100% - 7px));background-image:linear-gradient(180deg,rgba(255,255,255,0.05) 0%,transparent 50%);transition:opacity .2s}
+  .card-badge.smurf{background-color:rgba(255,70,85,0.10);color:var(--red);border-left:1px solid rgba(255,70,85,0.25);border-bottom:1px solid rgba(255,70,85,0.25)}
+  .card-badge.reverse{background-color:rgba(245,158,11,0.09);color:#fbbf24;border-left:1px solid rgba(245,158,11,0.25);border-bottom:1px solid rgba(245,158,11,0.25)}
+  .record-card:hover .card-badge{opacity:.85}
+  .empty-state{text-align:center;padding:80px 20px;width:100%;color:var(--text-dim);font-family:var(--font-mono);font-size:13px;letter-spacing:2px;display:flex;flex-direction:column;align-items:center;gap:24px}
+  .empty-state .cross-large{width:64px;height:64px;position:relative;opacity:.25}
+  .empty-state .cross-large::before,.empty-state .cross-large::after{content:"";position:absolute;background:var(--steel)}
+  .empty-state .cross-large::before{top:50%;left:0;right:0;height:1px;transform:translateY(-50%)}
+  .empty-state .cross-large::after{left:50%;top:0;bottom:0;width:1px;transform:translateX(-50%)}
+  .empty-state .cross-large .ring{position:absolute;inset:6px;border:1px solid var(--steel);border-radius:50%;opacity:.5}
+  .loading-indicator{display:flex;align-items:center;justify-content:center;gap:10px;padding:60px 20px;width:100%;color:var(--text-dim);font-family:var(--font-mono);font-size:12px;letter-spacing:2px}
+  .loading-pulse{width:8px;height:8px;background:var(--red);animation:pulse-dot 1.2s ease-in-out infinite}
+  .loading-pulse:nth-child(2){animation-delay:.15s}.loading-pulse:nth-child(3){animation-delay:.3s}
 
   /* FAB */
   .fab{position:fixed;bottom:32px;right:32px;z-index:100;width:52px;height:52px;border-radius:2px;background:var(--red);border:none;cursor:pointer;display:grid;place-items:center;font-size:26px;color:#fff;font-weight:300;line-height:1;box-shadow:0 4px 20px rgba(255,70,85,0.35);transition:transform .15s,box-shadow .15s;clip-path:polygon(0% 0%,100% 0%,100% calc(100% - 6px),calc(100% - 6px) 100%,0% 100%,0% 0%)}
@@ -73,7 +86,8 @@
   /* Modal */
   .modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.75);display:grid;place-items:center;backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .2s}
   .modal-overlay.open{opacity:1;pointer-events:auto}
-  .modal{background:var(--bg-card);border:1px solid var(--border);width:90vw;max-width:480px;max-height:90vh;overflow-y:auto;clip-path:polygon(0% 0%,100% 0%,100% calc(100% - 10px),calc(100% - 10px) 100%,0% 100%,0% 0%)}
+  .modal{background:var(--bg-card);border:1px solid var(--border);width:90vw;max-width:480px;max-height:90vh;overflow-y:auto;clip-path:polygon(0% 0%,100% 0%,100% calc(100% - 10px),calc(100% - 10px) 100%,0% 100%,0% 0%);transform:scale(0.96);transition:transform .25s ease}
+  .modal-overlay.open .modal{transform:scale(1)}
   .modal-wide{max-width:680px}
   .settings-grid{display:flex;gap:28px}
   .settings-col{flex:1;display:flex;flex-direction:column;gap:18px}
@@ -85,8 +99,9 @@
   .modal-close:hover{border-color:var(--red-dim);color:#fff}
   .modal-body{padding:24px 28px 28px;display:flex;flex-direction:column;gap:18px}
   .form-group{display:flex;flex-direction:column;gap:6px}
+  .form-row{display:flex;gap:18px;align-items:flex-end}
   .form-group label{font-family:var(--font-mono);font-size:10px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase}
-  .form-group input,.form-group textarea{background:#0d0d15;border:1px solid rgba(255,255,255,0.08);padding:10px 14px;color:#fff;font-family:var(--font);font-size:15px;transition:border-color .2s;resize:vertical}
+  .form-group input,.form-group textarea{background:#15151f;border:1px solid rgba(255,255,255,0.1);padding:10px 14px;color:#fff;font-family:var(--font);font-size:15px;transition:border-color .2s;resize:vertical}
   .form-group input:focus,.form-group textarea:focus{outline:none;border-color:var(--red-dim)}
   .form-group textarea{min-height:70px}
   .form-hint{font-size:11px;color:var(--text-dim);font-family:var(--font-mono);letter-spacing:.5px}
@@ -101,12 +116,17 @@
   .btn-test.ok{border-color:rgba(74,222,128,0.4);color:var(--green)}
 .btn-clear{font-family:var(--font-mono);font-size:10px;letter-spacing:1px;color:var(--text-dim);background:none;border:1px solid rgba(255,255,255,0.08);padding:4px 10px;cursor:pointer;transition:border-color .2s,color .2s}
 .btn-clear:hover{border-color:var(--red-dim);color:var(--red)}
+.type-toggle{display:flex;gap:0}
+.type-btn{font-family:var(--font-mono);font-size:12px;font-weight:700;letter-spacing:2px;padding:8px 20px;background:transparent;border:1px solid rgba(255,255,255,0.08);color:var(--text-dim);cursor:pointer;transition:border-color .2s,color .2s,background .2s}
+.type-btn:first-child{border-right:none}
+.type-btn.active.smurf-like{border-color:var(--red-dim);color:var(--red);background:rgba(255,70,85,0.08)}
+.type-btn.active.reverse-like{border-color:rgba(245,158,11,0.5);color:#f59e0b;background:rgba(245,158,11,0.08)}
   .upload-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .upload-status{font-family:var(--font-mono);font-size:11px;color:var(--green);letter-spacing:.5px}
 
   /* Toast */
-  .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);z-index:300;pointer-events:none;font-family:var(--font-mono);font-size:12px;letter-spacing:1px;color:#fff;background:#1a1a25;border:1px solid var(--border);padding:10px 24px;opacity:0;transition:opacity .25s}
-  .toast.show{opacity:1}.toast.error{border-color:var(--red-dim)}
+  .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(12px);z-index:300;pointer-events:none;font-family:var(--font-mono);font-size:12px;letter-spacing:1px;color:#fff;background:#1a1a25;border:1px solid var(--border);padding:10px 24px;opacity:0;transition:opacity .25s,transform .25s}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}.toast.error{border-color:var(--red-dim)}
 
   .site-footer{text-align:center;padding-top:40px;margin-top:24px;border-top:1px solid var(--border)}
   .site-footer p{font-family:var(--font-mono);font-size:11px;letter-spacing:2px;color:var(--text-dim)}
@@ -121,7 +141,7 @@
     .card-note{padding:10px 14px 14px}.card-id{font-size:16px}
     .fab{bottom:20px;right:20px;width:46px;height:46px}
   }
-  @media(prefers-reduced-motion:reduce){.record-card,.record-card::before,.fab,.modal-overlay{transition:none}.dot{animation:none;opacity:1}}
+  @media(prefers-reduced-motion:reduce){.record-card,.record-card::before,.fab,.modal-overlay,.modal,.toast{transition:none!important}.record-card{animation:none!important}.dot,.loading-pulse{animation:none!important;opacity:1}}
 </style>
 </head>
 <body>
@@ -134,7 +154,7 @@
     <!-- ════════════ Header ════════════ -->
     <header class="site-header">
       <div class="header-left">
-        <h1><span class="accent">炸鱼</span>观察记录</h1>
+        <h1><span class="accent">炸鱼</span>记录</h1>
         <span class="meta">共 <strong>{{ records.length }}</strong> 次遭遇</span>
       </div>
       <div class="header-actions">
@@ -145,11 +165,19 @@
 
     <!-- ════════════ Masonry ════════════ -->
     <div class="masonry" ref="masonryRef" @click="onMasonryClick">
-      <template v-if="records.length === 0">
-        <div class="empty-state">暂无记录，遇到炸鱼哥后点右下角 + 添加</div>
+      <div v-if="loading" class="loading-indicator">
+        <span class="loading-pulse"></span><span class="loading-pulse"></span><span class="loading-pulse"></span>
+        加载中
+      </div>
+      <template v-else-if="records.length === 0">
+        <div class="empty-state">
+          <div class="cross-large"><div class="ring"></div></div>
+          <span>暂无记录，遇到炸鱼哥后<br>点右下角 + 添加</span>
+        </div>
       </template>
       <template v-for="(r, i) in records" :key="i">
-        <article class="record-card">
+        <article class="record-card" :style="{'--i': i}">
+          <span class="card-badge" :class="r.type === 'reverse' ? 'reverse' : 'smurf'">{{ r.type === 'reverse' ? '反' : '炸' }}</span>
           <div class="card-top">
             <span class="card-date">{{ r.date }}</span>
             <span class="card-id">{{ r.id }}</span>
@@ -175,7 +203,7 @@
     </div>
 
     <footer class="site-footer">
-      <p><span class="dot"></span>遇到新的炸鱼哥？截图上传图床，点右下角添加</p>
+      <p><span class="dot"></span>炸鱼指利用不当手段影响对局平衡</p>
     </footer>
 
   </div>
@@ -194,9 +222,18 @@
         </div>
       </div>
       <div class="modal-body">
-        <div class="form-group">
-          <label>日期</label>
-          <input type="date" v-model="form.date">
+        <div class="form-row">
+          <div class="form-group" style="flex:0 0 auto">
+            <label>日期</label>
+            <input type="date" v-model="form.date" style="width:auto">
+          </div>
+          <div class="form-group">
+            <label>类型</label>
+            <div class="type-toggle">
+              <button type="button" class="type-btn smurf-like" :class="{ active: form.type === 'smurf' }" @click="form.type = 'smurf'">炸鱼</button>
+              <button type="button" class="type-btn reverse-like" :class="{ active: form.type === 'reverse' }" @click="form.type = 'reverse'">反向炸鱼</button>
+            </div>
+          </div>
         </div>
         <div class="form-group">
           <label>炸鱼哥 ID *</label>
@@ -322,11 +359,11 @@ const GAP    = 20;
 const COL_MIN = 340;
 
 const INLINE = [
-  {date:"2026-05-09",id:"击杀王#12345",images:[],note:"竞技模式击杀异常偏高，全程无沟通，怀疑开挂"},
-  {date:"2026-05-08",id:"Xx_SmurfMaster_xX",images:[],note:""},
-  {date:"2026-05-07",id:"别打我头#666",images:[],note:"连续三局 ACS > 400，队友举报后仍在排位中活跃"},
-  {date:"2026-05-06",id:"TwitchTV_ProMax",images:[],note:"直播标题写着「帮粉丝上分」"},
-  {date:"2026-05-05",id:"瞄准全靠锁#999",images:[],note:""},
+  {date:"2026-05-09",id:"击杀王#12345",images:[],note:"竞技模式击杀异常偏高，全程无沟通，怀疑开挂",type:"smurf"},
+  {date:"2026-05-08",id:"Xx_SmurfMaster_xX",images:[],note:"",type:"smurf"},
+  {date:"2026-05-07",id:"别打我头#666",images:[],note:"连续三局 ACS > 400，队友举报后仍在排位中活跃",type:"smurf"},
+  {date:"2026-05-06",id:"TwitchTV_ProMax",images:[],note:"直播标题写着「帮粉丝上分」",type:"smurf"},
+  {date:"2026-05-05",id:"瞄准全靠锁#999",images:[],note:"",type:"reverse"},
 ];
 
 function today(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
@@ -343,6 +380,7 @@ createApp({
   setup() {
     /* ── State ── */
     const records     = ref([]);
+    const loading     = ref(true);
     const gh          = ref(null);
     const showAdd     = ref(false);
     const showSettings = ref(false);
@@ -352,7 +390,7 @@ createApp({
     const testingPic  = ref(false);
     const testPicOk   = ref(false);
 
-    const form    = reactive({ date: today(), id: "", images: "", note: "" });
+    const form    = reactive({ date: today(), id: "", images: "", note: "", type: "smurf" });
     const ghForm  = reactive({ owner: "", repo: "", branch: "main", token: "", piclistUrl: "", picbed: "", piclistKey: "" });
     const toast   = reactive({ msg: "", type: "", show: false });
 
@@ -488,7 +526,7 @@ createApp({
 
     function persistFormDraft(){
       if (restoringDraft) return;
-      var d = { date: form.date, id: form.id, images: form.images, note: form.note };
+      var d = { date: form.date, id: form.id, images: form.images, note: form.note, type: form.type };
       if (d.date || d.id || d.images || d.note) {
         try { localStorage.setItem(LS_FORM_DRAFT, JSON.stringify(d)); } catch(_) {}
       }
@@ -498,7 +536,7 @@ createApp({
     function loadFormDraft(){
       try {
         var d = JSON.parse(localStorage.getItem(LS_FORM_DRAFT));
-        if (d && (d.date || d.id || d.images || d.note)) return d;
+        if (d && (d.date || d.id || d.images || d.note || d.type)) return d;
       } catch(_) {}
       return null;
     }
@@ -506,7 +544,7 @@ createApp({
       try { localStorage.removeItem(LS_FORM_DRAFT); } catch(_) {}
     }
     function clearDraft(){
-      form.date=today();form.id="";form.images="";form.note="";
+      form.date=today();form.id="";form.images="";form.note="";form.type="smurf";
       selectedFiles.value=[];uploadDone.value=[];uploading.value=false;
       clearFormDraft();
       var el=idInput.value;if(el)el.focus();
@@ -550,11 +588,16 @@ createApp({
 
     /* ── 数据加载 ── */
     async function loadRecords(){
-      if(gh.value){
-        try{var c=await ghGetFile();records.value=c.content;return}catch(e){console.warn("GitHub:",e.message)}
+      loading.value = true;
+      try {
+        if(gh.value && gh.value.token){
+          try{var c=await ghGetFile();records.value=c.content;return}catch(e){console.warn("GitHub:",e.message)}
+        }
+        try{var r=await fetch("records.json?"+Date.now());if(r.ok){records.value=await r.json();return}}catch(_){}
+        records.value=INLINE;
+      } finally {
+        loading.value = false;
       }
-      try{var r=await fetch("records.json?"+Date.now());if(r.ok){records.value=await r.json();return}}catch(_){}
-      records.value=INLINE;
     }
 
     function loadGhSettings(){
@@ -570,6 +613,7 @@ createApp({
       form.id = draft ? draft.id || "" : "";
       form.images = draft ? draft.images || "" : "";
       form.note = draft ? draft.note || "" : "";
+      form.type = draft ? draft.type || "smurf" : "smurf";
       selectedFiles.value=[];uploadDone.value=[];uploading.value=false;
       showAdd.value=true;
       nextTick(function(){
@@ -626,7 +670,7 @@ createApp({
       if(!form.id.trim()){showToast("请填写炸鱼哥 ID","error");return}
       submitting.value=true;
       var imgs=form.images.trim();
-      var record={date:form.date||today(),id:form.id.trim(),images:imgs?imgs.split(",").map(function(s){return s.trim()}):[],note:form.note.trim()};
+      var record={date:form.date||today(),id:form.id.trim(),images:imgs?imgs.split(",").map(function(s){return s.trim()}):[],note:form.note.trim(),type:form.type||"smurf"};
       try{
         var c=await ghGetFile();
         c.content.push(record);
@@ -658,7 +702,7 @@ createApp({
     watch(form, function(){ saveDraftDebounced(); }, { deep: true });
 
     return {
-      records, gh, showAdd, showSettings, submitting, testingGh, testGhOk, testingPic, testPicOk,
+      records, loading, gh, showAdd, showSettings, submitting, testingGh, testGhOk, testingPic, testPicOk,
       form, ghForm, toast,
       selectedFiles, uploading, uploadProgress, uploadDone,
       ghConnected, piclistConfigured, ghDotClass, ghDotTitle, ghHint, testGhLabel, testPicLabel,
