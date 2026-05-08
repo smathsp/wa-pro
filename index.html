@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>炸鱼观察记录</title>
+<style>
+  [v-cloak]{display:none}
+
+  :root {
+    --bg-deep: #0a0a0f; --bg-card: #111118; --bg-card-hover: #16161f;
+    --red: #FF4655; --red-dim: rgba(255,70,85,0.5); --cyan: #00e5ff;
+    --green: #4ade80; --steel: #7b8594; --text: #d0d0d6; --text-dim: #6b7280;
+    --border: rgba(255,255,255,0.06); --border-active: rgba(255,70,85,0.3);
+    --font: "PingFang SC","Microsoft YaHei","Hiragino Sans GB","Noto Sans SC",sans-serif;
+    --font-mono: "SF Mono","Cascadia Code","Consolas","Source Code Pro",monospace;
+    --gap: 20px;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{background:var(--bg-deep);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;text-wrap:pretty}
+  body{min-height:100vh;position:relative;overflow-x:hidden}
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9999;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.04) 2px,rgba(0,0,0,0.04) 4px)}
+  .grid-bg{position:fixed;inset:0;pointer-events:none;z-index:0;background-image:linear-gradient(rgba(255,70,85,0.022) 1px,transparent 1px),linear-gradient(90deg,rgba(255,70,85,0.022) 1px,transparent 1px);background-size:64px 64px;mask-image:radial-gradient(ellipse 70% 70% at 50% 30%,black 20%,transparent 80%)}
+  .container{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:48px var(--gap) 80px}
+
+  /* Header */
+  .site-header{margin-bottom:36px;padding-bottom:24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+  .header-left{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+  .site-header h1{font-size:clamp(24px,4vw,32px);font-weight:900;letter-spacing:1px;color:#fff}
+  .site-header h1 .accent{color:var(--red)}
+  .site-header .meta{font-family:var(--font-mono);font-size:12px;color:var(--text-dim);letter-spacing:1px}
+  .site-header .meta strong{color:var(--red);font-weight:700}
+  .header-actions{display:flex;align-items:center;gap:8px}
+  .header-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  .header-dot.online{background:var(--green);box-shadow:0 0 6px rgba(74,222,128,0.5)}
+  .header-dot.offline{background:var(--text-dim)}
+  .btn-icon{width:32px;height:32px;display:grid;place-items:center;background:none;border:1px solid rgba(255,255,255,0.1);color:var(--text-dim);cursor:pointer;font-size:15px;transition:border-color .2s,color .2s}
+  .btn-icon:hover{border-color:var(--red-dim);color:#fff}
+
+  /* Masonry */
+  .masonry{display:flex;gap:var(--gap);align-items:flex-start}
+  .masonry-col{display:flex;flex-direction:column;gap:var(--gap);flex:1;min-width:0}
+
+  /* Card */
+  .record-card{background:var(--bg-card);border:1px solid var(--border);position:relative;clip-path:polygon(0% 0%,100% 0%,100% calc(100% - 8px),calc(100% - 8px) 100%,0% 100%,0% 0%);transition:border-color .2s,background .2s;overflow:hidden}
+  .record-card:hover{border-color:var(--border-active);background:var(--bg-card-hover)}
+  .record-card::before{content:"";position:absolute;top:0;left:0;width:3px;height:100%;background:var(--red);opacity:0;transition:opacity .2s;z-index:1}
+  .record-card:hover::before{opacity:1}
+  .card-top{display:flex;align-items:baseline;gap:14px;padding:18px 20px 0;flex-wrap:wrap}
+  .card-date{font-family:var(--font-mono);font-size:11px;color:var(--cyan);letter-spacing:2px;white-space:nowrap;flex-shrink:0}
+  .card-id{font-size:18px;font-weight:800;color:#fff;letter-spacing:.5px;word-break:break-all;line-height:1.3}
+  .card-images{padding:14px 20px 0;display:flex;flex-direction:column;gap:8px}
+  .card-img-slot{background:#0d0d15;border:1px dashed rgba(255,255,255,0.08);overflow:hidden;transition:border-color .2s}
+  .record-card:hover .card-img-slot{border-color:rgba(255,70,85,0.15)}
+  .card-img-slot.has-image{border-style:solid;border-color:rgba(255,255,255,0.07)}
+  .card-img-slot img{width:100%;height:auto;display:block;vertical-align:bottom}
+  .card-img-slot:not(.has-image){min-height:180px;display:grid;place-items:center;cursor:pointer}
+  .img-placeholder{display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--text-dim);pointer-events:none;user-select:none}
+  .img-placeholder .cross{width:36px;height:36px;position:relative;opacity:.3}
+  .img-placeholder .cross::before,.img-placeholder .cross::after{content:"";position:absolute;background:var(--steel)}
+  .img-placeholder .cross::before{top:50%;left:0;right:0;height:1px;transform:translateY(-50%)}
+  .img-placeholder .cross::after{left:50%;top:0;bottom:0;width:1px;transform:translateX(-50%)}
+  .img-placeholder .cross .ring{position:absolute;inset:3px;border:1px solid var(--steel);border-radius:50%;opacity:.5}
+  .img-placeholder span{font-size:10px;letter-spacing:2px}
+  .card-note{padding:12px 20px 18px;font-size:13px;color:var(--steel);line-height:1.7}
+  .card-note:empty{display:none}
+  .empty-state{text-align:center;padding:80px 20px;width:100%;color:var(--text-dim);font-family:var(--font-mono);font-size:13px;letter-spacing:2px;border:1px dashed rgba(255,255,255,0.06)}
+
+  /* FAB */
+  .fab{position:fixed;bottom:32px;right:32px;z-index:100;width:52px;height:52px;border-radius:2px;background:var(--red);border:none;cursor:pointer;display:grid;place-items:center;font-size:26px;color:#fff;font-weight:300;line-height:1;box-shadow:0 4px 20px rgba(255,70,85,0.35);transition:transform .15s,box-shadow .15s;clip-path:polygon(0% 0%,100% 0%,100% calc(100% - 6px),calc(100% - 6px) 100%,0% 100%,0% 0%)}
+  .fab:hover{transform:scale(1.08);box-shadow:0 6px 28px rgba(255,70,85,0.5)}
+
+  /* Modal */
+  .modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.75);display:grid;place-items:center;backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .2s}
+  .modal-overlay.open{opacity:1;pointer-events:auto}
+  .modal{background:var(--bg-card);border:1px solid var(--border);width:90vw;max-width:480px;max-height:90vh;overflow-y:auto;clip-path:polygon(0% 0%,100% 0%,100% calc(100% - 10px),calc(100% - 10px) 100%,0% 100%,0% 0%)}
+  .modal-wide{max-width:680px}
+  .settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px 28px}
+  .settings-grid .col-label{grid-column:span 1;font-family:var(--font-mono);font-size:11px;color:var(--cyan);letter-spacing:2px;margin-bottom:-8px}
+  .settings-full{grid-column:1/-1}
+  .modal-header{padding:24px 28px 0;display:flex;align-items:center;justify-content:space-between}
+  .modal-header h2{font-size:16px;font-weight:800;color:#fff;letter-spacing:2px;font-family:var(--font-mono)}
+  .modal-close{width:32px;height:32px;cursor:pointer;background:none;border:1px solid rgba(255,255,255,0.1);color:var(--text-dim);font-size:16px;display:grid;place-items:center;transition:border-color .2s,color .2s}
+  .modal-close:hover{border-color:var(--red-dim);color:#fff}
+  .modal-body{padding:24px 28px 28px;display:flex;flex-direction:column;gap:18px}
+  .form-group{display:flex;flex-direction:column;gap:6px}
+  .form-group label{font-family:var(--font-mono);font-size:10px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase}
+  .form-group input,.form-group textarea{background:#0d0d15;border:1px solid rgba(255,255,255,0.08);padding:10px 14px;color:#fff;font-family:var(--font);font-size:15px;transition:border-color .2s;resize:vertical}
+  .form-group input:focus,.form-group textarea:focus{outline:none;border-color:var(--red-dim)}
+  .form-group textarea{min-height:70px}
+  .form-hint{font-size:11px;color:var(--text-dim);font-family:var(--font-mono);letter-spacing:.5px}
+  .btn-submit{margin-top:4px;padding:12px 0;background:var(--red);border:none;cursor:pointer;color:#fff;font-family:var(--font-mono);font-size:13px;font-weight:700;letter-spacing:3px;clip-path:polygon(0% 0%,100% 0%,100% calc(100% - 4px),calc(100% - 4px) 100%,0% 100%,0% 0%);transition:opacity .2s}
+  .btn-submit:hover{opacity:.85}
+  .btn-submit:disabled{opacity:.4;cursor:not-allowed}
+  .btn-upload{font-family:var(--font-mono);font-size:11px;letter-spacing:1px;color:var(--text-dim);background:none;border:1px solid rgba(255,255,255,0.1);padding:6px 14px;cursor:pointer;transition:border-color .2s,color .2s;white-space:nowrap}
+  .btn-upload:hover{border-color:var(--cyan);color:var(--cyan)}
+  .btn-upload:disabled{opacity:.4;cursor:not-allowed}
+  .btn-test{font-family:var(--font-mono);font-size:10px;letter-spacing:2px;color:var(--text-dim);background:none;border:1px solid rgba(255,255,255,0.1);padding:6px 14px;cursor:pointer;transition:border-color .2s,color .2s;align-self:flex-start}
+  .btn-test:hover{border-color:var(--green);color:var(--green)}
+  .btn-test.ok{border-color:rgba(74,222,128,0.4);color:var(--green)}
+  .upload-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .upload-status{font-family:var(--font-mono);font-size:11px;color:var(--green);letter-spacing:.5px}
+
+  /* Toast */
+  .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);z-index:300;pointer-events:none;font-family:var(--font-mono);font-size:12px;letter-spacing:1px;color:#fff;background:#1a1a25;border:1px solid var(--border);padding:10px 24px;opacity:0;transition:opacity .25s}
+  .toast.show{opacity:1}.toast.error{border-color:var(--red-dim)}
+
+  .site-footer{text-align:center;padding-top:40px;margin-top:24px;border-top:1px solid var(--border)}
+  .site-footer p{font-family:var(--font-mono);font-size:11px;letter-spacing:2px;color:var(--text-dim)}
+  .dot{display:inline-block;width:6px;height:6px;background:var(--red);margin-right:8px;animation:pulse-dot 2s ease-in-out infinite}
+  @keyframes pulse-dot{0%,100%{opacity:.3}50%{opacity:1}}
+
+  @media(max-width:600px){
+    .container{padding:24px 14px 60px}.modal,.modal-wide{max-width:100vw}
+    .modal-body{padding:20px 18px 24px}.modal-header{padding:20px 18px 0}
+    .settings-grid{grid-template-columns:1fr}
+    .card-top{padding:14px 14px 0;gap:8px}.card-images{padding:10px 14px 0}
+    .card-note{padding:10px 14px 14px}.card-id{font-size:16px}
+    .fab{bottom:20px;right:20px;width:46px;height:46px}
+  }
+  @media(prefers-reduced-motion:reduce){.record-card,.record-card::before,.fab,.modal-overlay{transition:none}.dot{animation:none;opacity:1}}
+</style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+
+<div id="app" v-cloak>
+  <div class="container">
+
+    <!-- ════════════ Header ════════════ -->
+    <header class="site-header">
+      <div class="header-left">
+        <h1><span class="accent">炸鱼</span>观察记录</h1>
+        <span class="meta">共 <strong>{{ records.length }}</strong> 次遭遇</span>
+      </div>
+      <div class="header-actions">
+        <span :class="ghDotClass" :title="ghDotTitle"></span>
+        <button class="btn-icon" @click="openSettings" title="设置">&#9881;</button>
+      </div>
+    </header>
+
+    <!-- ════════════ Masonry ════════════ -->
+    <div class="masonry" ref="masonryRef" @click="onMasonryClick">
+      <template v-if="records.length === 0">
+        <div class="empty-state">暂无记录，遇到炸鱼哥后点右下角 + 添加</div>
+      </template>
+      <template v-for="(r, i) in records" :key="i">
+        <article class="record-card">
+          <div class="card-top">
+            <span class="card-date">{{ r.date }}</span>
+            <span class="card-id">{{ r.id }}</span>
+          </div>
+          <div class="card-images">
+            <template v-if="!r.images || r.images.length === 0">
+              <div class="card-img-slot">
+                <div class="img-placeholder">
+                  <div class="cross"><div class="ring"></div></div>
+                  <span>暂无截图</span>
+                </div>
+              </div>
+            </template>
+            <template v-else>
+              <div v-for="(src, j) in r.images" :key="j" class="card-img-slot has-image">
+                <img :src="src" alt="截图" loading="lazy">
+              </div>
+            </template>
+          </div>
+          <div v-if="r.note" class="card-note">{{ r.note }}</div>
+        </article>
+      </template>
+    </div>
+
+    <footer class="site-footer">
+      <p><span class="dot"></span>遇到新的炸鱼哥？截图上传图床，点右下角添加</p>
+    </footer>
+
+  </div>
+
+  <!-- ════════════ FAB ════════════ -->
+  <button class="fab" @click="openAdd" title="添加记录">+</button>
+
+  <!-- ════════════ Add Modal ════════════ -->
+  <div class="modal-overlay" :class="{ open: showAdd }" @click.self="showAdd = false">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>新增记录</h2>
+        <button class="modal-close" @click="showAdd = false">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>日期</label>
+          <input type="date" v-model="form.date">
+        </div>
+        <div class="form-group">
+          <label>炸鱼哥 ID *</label>
+          <input type="text" v-model="form.id" placeholder="游戏内显示的 ID" ref="idInput">
+        </div>
+        <div class="form-group">
+          <label>截图 URL</label>
+          <input type="text" v-model="form.images" :placeholder="piclistConfigured ? '下方选择图片上传，或手动粘贴 URL' : 'https://img.smathsp.com/2026/05/xxx.jpg'">
+          <span class="form-hint">多个用逗号分隔</span>
+        </div>
+
+        <!-- 上传到图床 -->
+        <div class="form-group">
+          <label>本地上传 {{ piclistConfigured ? '' : '(未配置)' }}</label>
+          <div class="upload-row">
+            <input type="file" accept="image/*" multiple
+                   @change="onFilesSelected" ref="fileInput"
+                   style="display:none">
+            <button type="button" class="btn-upload" @click="$refs.fileInput.click()">
+              选择图片
+            </button>
+            <span v-if="selectedFiles.length" class="form-hint">
+              已选 {{ selectedFiles.length }} 张
+            </span>
+          </div>
+          <button type="button" class="btn-upload"
+                  :disabled="!selectedFiles.length || uploading || !piclistConfigured"
+                  @click="uploadToPiclist"
+                  style="margin-top:6px">
+            {{ uploading ? '上传中 ' + uploadProgress : '上传到图床' }}
+          </button>
+          <span v-if="uploadDone.length" class="upload-status">
+            已上传 {{ uploadDone.length }} 张，URL 已填入输入框
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label>备注</label>
+          <textarea v-model="form.note" placeholder="可选：简单描述当时情况"></textarea>
+        </div>
+        <button class="btn-submit" :disabled="submitting" @click="submitRecord">
+          {{ submitting ? '提交中...' : '提交到 GitHub' }}
+        </button>
+        <span class="form-hint" style="text-align:center">{{ ghHint }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ Settings Modal ════════════ -->
+  <div class="modal-overlay" :class="{ open: showSettings }" @click.self="showSettings = false">
+    <div class="modal modal-wide">
+      <div class="modal-header">
+        <h2>设置</h2>
+        <button class="modal-close" @click="showSettings = false">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-grid">
+
+          <!-- 左列：GitHub -->
+          <div class="col-label">GitHub</div>
+          <div class="col-label">PicList-Core</div>
+
+          <div class="form-group">
+            <label>用户名</label>
+            <input type="text" v-model="ghForm.owner" placeholder="GitHub 用户名">
+          </div>
+          <div class="form-group">
+            <label>服务地址</label>
+            <input type="text" v-model="ghForm.piclistUrl" placeholder="http://127.0.0.1:36677">
+          </div>
+
+          <div class="form-group">
+            <label>仓库名</label>
+            <input type="text" v-model="ghForm.repo" placeholder="仓库名">
+          </div>
+          <div class="form-group">
+            <label>图床名称 (picbed)</label>
+            <input type="text" v-model="ghForm.picbed" placeholder="backblaze">
+          </div>
+
+          <div class="form-group">
+            <label>分支（默认 main）</label>
+            <input type="text" v-model="ghForm.branch" placeholder="main">
+          </div>
+          <div class="form-group">
+            <label>密钥 (key)</label>
+            <input type="password" v-model="ghForm.piclistKey" placeholder="上传密钥">
+          </div>
+
+          <div class="form-group">
+            <label>Personal Access Token</label>
+            <input type="password" v-model="ghForm.token" placeholder="ghp_...">
+            <span class="form-hint">需勾选 Contents 读写权限</span>
+          </div>
+          <div class="form-group">
+            <label>&nbsp;</label>
+            <span class="form-hint">Token 仅存于浏览器 localStorage</span>
+          </div>
+
+          <!-- 测试按钮 -->
+          <button class="btn-test" :class="{ ok: testGhOk }" @click="testGhConnection">
+            {{ testGhLabel }}
+          </button>
+          <button class="btn-test" :class="{ ok: testPicOk }" @click="testPicConnection">
+            {{ testPicLabel }}
+          </button>
+
+        </div>
+
+        <button class="btn-submit settings-full" @click="saveSettings">保存设置</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ Toast ════════════ -->
+  <div class="toast" :class="{ show: toast.show, error: toast.type === 'error' }">{{ toast.msg }}</div>
+</div>
+
+<script src="https://unpkg.com/vue@3.4.21/dist/vue.global.prod.js"></script>
+<script>
+const LS_GH  = "smurf_log_gh";
+const GH_API = "https://api.github.com";
+const GAP    = 20;
+const COL_MIN = 340;
+
+const INLINE = [
+  {date:"2026-05-09",id:"击杀王#12345",images:[],note:"竞技模式击杀异常偏高，全程无沟通，怀疑开挂"},
+  {date:"2026-05-08",id:"Xx_SmurfMaster_xX",images:[],note:""},
+  {date:"2026-05-07",id:"别打我头#666",images:[],note:"连续三局 ACS > 400，队友举报后仍在排位中活跃"},
+  {date:"2026-05-06",id:"TwitchTV_ProMax",images:[],note:"直播标题写着「帮粉丝上分」"},
+  {date:"2026-05-05",id:"瞄准全靠锁#999",images:[],note:""},
+];
+
+function today(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function debounce(fn,ms){var t;return function(){clearTimeout(t);t=setTimeout(fn,ms)}}
+
+/* ═══════════════════════════════════════════════════════════════
+   Vue App
+   ═══════════════════════════════════════════════════════════════ */
+const { createApp, ref, reactive, computed, onMounted, nextTick, watch } = Vue;
+
+createApp({
+  setup() {
+    /* ── State ── */
+    const records     = ref([]);
+    const gh          = ref(null);
+    const showAdd     = ref(false);
+    const showSettings = ref(false);
+    const submitting  = ref(false);
+    const testingGh   = ref(false);
+    const testGhOk    = ref(false);
+    const testingPic  = ref(false);
+    const testPicOk   = ref(false);
+
+    const form    = reactive({ date: today(), id: "", images: "", note: "" });
+    const ghForm  = reactive({ owner: "", repo: "", branch: "main", token: "", piclistUrl: "", picbed: "", piclistKey: "" });
+    const toast   = reactive({ msg: "", type: "", show: false });
+
+    // 上传
+    const selectedFiles  = ref([]);
+    const uploading      = ref(false);
+    const uploadProgress = ref("");
+    const uploadDone     = ref([]);
+
+    const masonryRef = ref(null);
+    const idInput    = ref(null);
+
+    let toastTimer = null;
+
+    /* ── Computed ── */
+    const ghConnected   = computed(() => gh.value && gh.value.token);
+    const piclistConfigured = computed(() => gh.value && gh.value.piclistUrl);
+    const ghDotClass    = computed(() => ghConnected.value ? "header-dot online" : "header-dot offline");
+    const ghDotTitle    = computed(() => ghConnected.value
+      ? "GitHub 已连接 — "+gh.value.owner+"/"+gh.value.repo : "GitHub 未连接 — 点齿轮设置");
+    const ghHint        = computed(() => ghConnected.value
+      ? "将写入 "+gh.value.owner+"/"+gh.value.repo+" → Pages 自动更新" : "需先配置 GitHub 设置（点右上角齿轮）");
+    const testGhLabel   = computed(() => testingGh.value ? "测试中..." : testGhOk.value ? "GitHub ✓" : "测试 GitHub");
+    const testPicLabel  = computed(() => testingPic.value ? "测试中..." : testPicOk.value ? "图床 ✓" : "测试图床");
+
+    /* ── GitHub API ── */
+    function ghHeaders(){
+      return { Authorization:"Bearer "+gh.value.token, Accept:"application/vnd.github+json", "X-GitHub-Api-Version":"2022-11-28" };
+    }
+    async function ghGetFile(){
+      var url=GH_API+"/repos/"+gh.value.owner+"/"+gh.value.repo+"/contents/records.json?ref="+gh.value.branch;
+      var r=await fetch(url,{headers:ghHeaders()});
+      if(!r.ok)throw new Error("GET → "+r.status);
+      var d=await r.json();
+      return {content:JSON.parse(atob(d.content)),sha:d.sha};
+    }
+    async function ghPutFile(content,sha,msg){
+      var url=GH_API+"/repos/"+gh.value.owner+"/"+gh.value.repo+"/contents/records.json";
+      var body={message:msg||"新增炸鱼记录",content:btoa(unescape(encodeURIComponent(JSON.stringify(content,null,2)+"\n"))),sha,branch:gh.value.branch};
+      var r=await fetch(url,{method:"PUT",headers:ghHeaders(),body:JSON.stringify(body)});
+      if(!r.ok)throw new Error("PUT → "+r.status);
+      return r.json();
+    }
+    async function ghTestConnection(){
+      var url=GH_API+"/repos/"+gh.value.owner+"/"+gh.value.repo;
+      var r=await fetch(url,{headers:ghHeaders()});
+      return r.ok;
+    }
+
+    /* ── PicList-Core 上传 ── */
+    function onFilesSelected(e){
+      selectedFiles.value = Array.from(e.target.files || []);
+      uploadDone.value = [];
+      // 重置 input 以便重复选同一个文件
+      e.target.value = "";
+    }
+
+    async function uploadToPiclist(){
+      if(!selectedFiles.value.length)return;
+      if(!gh.value||!gh.value.piclistUrl){showToast("请先在设置中配置 PicList-Core 地址","error");return}
+
+      uploading.value = true;
+      uploadDone.value = [];
+      var urls = [];
+      var base = gh.value.piclistUrl.replace(/\/+$/,"");
+
+      // 构建 query 参数
+      var qs = [];
+      if(gh.value.picbed) qs.push("picbed="+encodeURIComponent(gh.value.picbed));
+      if(gh.value.piclistKey) qs.push("key="+encodeURIComponent(gh.value.piclistKey));
+      var uploadUrl = base+"/upload"+(qs.length?"?"+qs.join("&"):"");
+
+      for(var i=0;i<selectedFiles.value.length;i++){
+        uploadProgress.value = (i+1)+"/"+selectedFiles.value.length;
+        var fd = new FormData();
+        fd.append("image", selectedFiles.value[i]);
+
+        try{
+          var r = await fetch(uploadUrl, { method:"POST", body:fd });
+          if(!r.ok)throw new Error("HTTP "+r.status);
+          var data = await r.json();
+
+          // PicList-Core 返回格式兼容：{success:true,result:["url"]} 或 ["url"] 或 {url:"..."}
+          var extracted = extractUrls(data);
+          if(!extracted.length)throw new Error("未识别到返回 URL");
+          urls = urls.concat(extracted);
+        }catch(e){
+          showToast("上传失败 ("+(i+1)+"/"+selectedFiles.value.length+"): "+e.message,"error");
+          uploading.value = false;
+          uploadProgress.value = "";
+          return;
+        }
+      }
+
+      // 填入输入框
+      uploadDone.value = urls;
+      var existing = form.images.trim();
+      form.images = (existing ? existing + ", " : "") + urls.join(", ");
+      selectedFiles.value = [];
+      uploading.value = false;
+      uploadProgress.value = "";
+      showToast("已上传 "+urls.length+" 张截图，URL 已填入");
+    }
+
+    function extractUrls(data){
+      if(!data)return[];
+      // 格式1: {success:true, result:["url1","url2"]}
+      if(data.result&&Array.isArray(data.result))return data.result.filter(function(u){return typeof u==="string"});
+      // 格式2: ["url1","url2"]
+      if(Array.isArray(data))return data.filter(function(u){return typeof u==="string"});
+      // 格式3: {url:"..."} 或 {data:{url:"..."}}
+      if(typeof data.url==="string")return[data.url];
+      if(data.data&&typeof data.data.url==="string")return[data.data.url];
+      // 格式4: {data:["url1","url2"]}
+      if(data.data&&Array.isArray(data.data))return data.data.filter(function(u){return typeof u==="string"});
+      return[];
+    }
+
+    /* ── Toast ── */
+    function showToast(msg, type){
+      toast.msg=msg;toast.type=type||"";toast.show=true;
+      clearTimeout(toastTimer);
+      toastTimer=setTimeout(function(){toast.show=false},3500);
+    }
+
+    /* ── Masonry ── */
+    function layoutMasonry(){
+      var el = masonryRef.value;
+      if(!el||records.value.length===0)return;
+      var avail=el.clientWidth;
+      var cols=Math.max(1,Math.floor((avail+GAP)/(COL_MIN+GAP)));
+      var cards=el.querySelectorAll(":scope > .record-card");
+      if(cards.length===0)return;
+      el.innerHTML="";
+      var colDivs=[];
+      for(var i=0;i<cols;i++){
+        var col=document.createElement("div");col.className="masonry-col";
+        el.appendChild(col);colDivs.push(col);
+      }
+      cards.forEach(function(card){
+        var minIdx=0,minH=colDivs[0].scrollHeight;
+        for(var i=1;i<cols;i++){var h=colDivs[i].scrollHeight;if(h<minH){minH=h;minIdx=i}}
+        colDivs[minIdx].appendChild(card);
+      });
+    }
+
+    function onMasonryClick(e){
+      var slot=e.target.closest(".card-img-slot:not(.has-image)");
+      if(!slot)return;
+      var inp=document.createElement("input");inp.type="file";inp.accept="image/*";
+      inp.onchange=function(){
+        var f=inp.files[0];if(!f)return;
+        var reader=new FileReader();
+        reader.onload=function(){
+          var img=document.createElement("img");img.src=reader.result;img.alt="截图";
+          slot.innerHTML="";slot.appendChild(img);slot.classList.add("has-image");
+          img.onload=function(){nextTick().then(layoutMasonry)};
+        };reader.readAsDataURL(f);
+      };inp.click();
+    }
+
+    /* ── 数据加载 ── */
+    async function loadRecords(){
+      if(gh.value){
+        try{var c=await ghGetFile();records.value=c.content;return}catch(e){console.warn("GitHub:",e.message)}
+      }
+      try{var r=await fetch("records.json?"+Date.now());if(r.ok){records.value=await r.json();return}}catch(_){}
+      records.value=INLINE;
+    }
+
+    function loadGhSettings(){
+      try{gh.value=JSON.parse(localStorage.getItem(LS_GH))}catch(_){gh.value=null}
+      if(!gh.value||!gh.value.token)gh.value=null;
+    }
+
+    /* ── Actions ── */
+    function openAdd(){
+      form.date=today();form.id="";form.images="";form.note="";
+      selectedFiles.value=[];uploadDone.value=[];uploading.value=false;
+      showAdd.value=true;
+      nextTick(function(){var el=idInput.value;if(el)el.focus();});
+    }
+    function openSettings(){
+      if(gh.value){
+        ghForm.owner=gh.value.owner||"";ghForm.repo=gh.value.repo||"";
+        ghForm.branch=gh.value.branch||"main";ghForm.token=gh.value.token||"";
+        ghForm.piclistUrl=gh.value.piclistUrl||"";ghForm.picbed=gh.value.picbed||"";ghForm.piclistKey=gh.value.piclistKey||"";
+      }else{
+        ghForm.owner="";ghForm.repo="";ghForm.branch="main";ghForm.token="";ghForm.piclistUrl="";ghForm.picbed="";ghForm.piclistKey="";
+      }
+      showSettings.value=true;
+    }
+    function saveSettings(){
+      var s={
+        owner:ghForm.owner.trim(), repo:ghForm.repo.trim(),
+        branch:ghForm.branch.trim()||"main", token:ghForm.token.trim(),
+        piclistUrl:ghForm.piclistUrl.trim(), picbed:ghForm.picbed.trim(), piclistKey:ghForm.piclistKey.trim()
+      };
+      if(!s.owner||!s.repo||!s.token){showToast("请填写用户名、仓库名和 Token","error");return}
+      gh.value=s;localStorage.setItem(LS_GH,JSON.stringify(s));
+      showSettings.value=false;
+      loadRecords().then(function(){nextTick().then(layoutMasonry)});
+      showToast("设置已保存");
+    }
+    async function testGhConnection(){
+      var s={owner:ghForm.owner.trim(),repo:ghForm.repo.trim(),token:ghForm.token.trim()};
+      if(!s.owner||!s.repo||!s.token){showToast("请先填写完整 GitHub 信息","error");return}
+      var old=gh.value;gh.value=s;testingGh.value=true;testGhOk.value=false;
+      try{
+        var ok=await ghTestConnection();
+        testGhOk.value=ok;
+        showToast(ok?"GitHub 连接成功":"GitHub 连接失败",ok?"":"error");
+      }catch(e){testGhOk.value=false;showToast("GitHub: "+e.message,"error")}
+      gh.value=old;testingGh.value=false;
+    }
+    async function testPicConnection(){
+      var url=ghForm.piclistUrl.trim();
+      if(!url){showToast("请先填写 PicList-Core 服务地址","error");return}
+      testingPic.value=true;testPicOk.value=false;
+      try{
+        var r=await fetch(url.replace(/\/+$/,""),{method:"GET"});
+        testPicOk.value=r.ok;
+        showToast(r.ok?"图床服务可达":"图床无响应 ("+r.status+")",r.ok?"":"error");
+      }catch(e){testPicOk.value=false;showToast("图床不可达: "+e.message,"error")}
+      testingPic.value=false;
+    }
+    async function submitRecord(){
+      if(!gh.value){showToast("请先配置 GitHub 设置","error");return}
+      if(!form.id.trim()){showToast("请填写炸鱼哥 ID","error");return}
+      submitting.value=true;
+      var imgs=form.images.trim();
+      var record={date:form.date||today(),id:form.id.trim(),images:imgs?imgs.split(",").map(function(s){return s.trim()}):[],note:form.note.trim()};
+      try{
+        var c=await ghGetFile();
+        c.content.push(record);
+        await ghPutFile(c.content,c.sha,"新增炸鱼记录: "+record.id);
+        records.value=c.content;
+        showAdd.value=false;
+        nextTick().then(layoutMasonry);
+        showToast("已提交 → "+gh.value.owner+"/"+gh.value.repo);
+      }catch(e){showToast("提交失败："+e.message,"error")}
+      submitting.value=false;
+    }
+
+    function onKeydown(e){
+      if(e.key==="Escape"){showAdd.value=false;showSettings.value=false}
+    }
+
+    /* ── Lifecycle ── */
+    onMounted(async function(){
+      loadGhSettings();
+      await loadRecords();
+      await nextTick();
+      layoutMasonry();
+      window.addEventListener("resize",debounce(layoutMasonry,200));
+      document.addEventListener("keydown",onKeydown);
+    });
+
+    watch(records, function(){ nextTick().then(layoutMasonry); });
+
+    return {
+      records, gh, showAdd, showSettings, submitting, testingGh, testGhOk, testingPic, testPicOk,
+      form, ghForm, toast,
+      selectedFiles, uploading, uploadProgress, uploadDone,
+      ghConnected, piclistConfigured, ghDotClass, ghDotTitle, ghHint, testGhLabel, testPicLabel,
+      masonryRef, idInput,
+      openAdd, openSettings, saveSettings, testGhConnection, testPicConnection, submitRecord,
+      onFilesSelected, uploadToPiclist, onMasonryClick,
+    };
+  }
+}).mount("#app");
+</script>
+
+</body>
+</html>
