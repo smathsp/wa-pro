@@ -523,7 +523,7 @@ createApp({
 
     function loadGhSettings(){
       try{gh.value=JSON.parse(localStorage.getItem(LS_GH))}catch(_){gh.value=null}
-      if(!gh.value||!gh.value.token)gh.value=null;
+      if(!gh.value)gh.value={};
     }
 
     /* ── Actions ── */
@@ -549,7 +549,6 @@ createApp({
         branch:ghForm.branch.trim()||"main", token:ghForm.token.trim(),
         piclistUrl:ghForm.piclistUrl.trim(), picbed:ghForm.picbed.trim(), piclistKey:ghForm.piclistKey.trim()
       };
-      if(!s.owner||!s.repo||!s.token){showToast("请填写用户名、仓库名和 Token","error");return}
       gh.value=s;localStorage.setItem(LS_GH,JSON.stringify(s));
       showSettings.value=false;
       loadRecords().then(function(){nextTick().then(layoutMasonry)});
