@@ -129,13 +129,40 @@
   .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(12px);z-index:300;pointer-events:none;font-family:var(--font-mono);font-size:12px;letter-spacing:1px;color:#fff;background:#1a1a25;border:1px solid var(--border);padding:10px 24px;opacity:0;transition:opacity .25s,transform .25s}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}.toast.error{border-color:var(--red-dim)}
 
+  /* Submit Header Button */
+  .btn-submit-header{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:1px;padding:6px 14px;background:var(--green);color:#000;border:none;cursor:pointer;clip-path:polygon(0% 0%,100% 0%,100% calc(100% - 3px),calc(100% - 3px) 100%,0% 100%,0% 0%);transition:opacity .2s;white-space:nowrap}
+  .btn-submit-header:hover{opacity:.85}
+  .btn-submit-header:disabled{opacity:.4;cursor:not-allowed}
+
+  /* Modal XL */
+  .modal-xl{max-width:900px}
+
+  /* Records Management */
+  .records-manage{display:flex;flex-direction:column;gap:10px;padding-top:18px;border-top:1px solid var(--border)}
+  .records-search{background:#15151f;border:1px solid rgba(255,255,255,0.1);padding:8px 14px;color:#fff;font-family:var(--font);font-size:14px;transition:border-color .2s}
+  .records-search:focus{outline:none;border-color:var(--red-dim)}
+  .records-list{max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:1px}
+  .record-row{display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(255,255,255,0.02);transition:background .15s}
+  .record-row:hover{background:rgba(255,255,255,0.05)}
+  .record-row-badge{font-family:var(--font-mono);font-size:9px;font-weight:900;letter-spacing:1px;padding:2px 6px;flex-shrink:0}
+  .record-row-badge.smurf{background:rgba(255,70,85,0.12);color:var(--red)}
+  .record-row-badge.reverse{background:rgba(245,158,11,0.12);color:#f59e0b}
+  .record-row-date{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);flex-shrink:0}
+  .record-row-id{font-size:13px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .record-row-tag{font-family:var(--font-mono);font-size:9px;letter-spacing:1px;padding:1px 5px;flex-shrink:0}
+  .record-row-tag.pending{background:rgba(0,229,255,0.12);color:var(--cyan)}
+  .record-row-actions{display:flex;gap:4px;flex-shrink:0}
+  .btn-row-action{width:26px;height:26px;display:grid;place-items:center;background:none;border:1px solid rgba(255,255,255,0.08);color:var(--text-dim);cursor:pointer;font-size:13px;transition:border-color .2s,color .2s}
+  .btn-row-action.edit:hover{border-color:var(--cyan);color:var(--cyan)}
+  .btn-row-action.delete:hover{border-color:var(--red-dim);color:var(--red)}
+
   .site-footer{text-align:center;padding-top:40px;margin-top:24px;border-top:1px solid var(--border)}
   .site-footer p{font-family:var(--font-mono);font-size:11px;letter-spacing:2px;color:var(--text-dim)}
   .dot{display:inline-block;width:6px;height:6px;background:var(--red);margin-right:8px;animation:pulse-dot 2s ease-in-out infinite}
   @keyframes pulse-dot{0%,100%{opacity:.3}50%{opacity:1}}
 
   @media(max-width:600px){
-    .container{padding:24px 14px 60px}.modal,.modal-wide{max-width:100vw}
+    .container{padding:24px 14px 60px}.modal,.modal-wide,.modal-xl{max-width:100vw}
     .modal-body{padding:20px 18px 24px}.modal-header{padding:20px 18px 0}
     .settings-grid{flex-direction:column}
     .card-top{padding:14px 14px 0;gap:8px}.card-images{padding:10px 14px 0}
@@ -159,6 +186,9 @@
         <span class="meta">共 <strong>{{ records.length }}</strong> 次遭遇</span>
       </div>
       <div class="header-actions">
+        <button v-if="hasPending" class="btn-submit-header" :disabled="submittingGh" @click="submitToGitHub">
+          {{ submittingGh ? '提交中...' : '提交 ' + pendingCount + ' 条' }}
+        </button>
         <span :class="ghDotClass" :title="ghDotTitle"></span>
         <button class="btn-icon" @click="openSettings" title="设置">&#9881;</button>
       </div>
@@ -216,10 +246,10 @@
   <div class="modal-overlay" :class="{ open: showAdd }" @click.self="showAdd = false">
     <div class="modal">
       <div class="modal-header">
-        <h2>新增记录</h2>
+        <h2>{{ editingIndex !== -1 ? '编辑记录' : '新增记录' }}</h2>
         <div style="display:flex;align-items:center;gap:8px">
-          <button class="btn-clear" @click="clearDraft" title="清空表单">清空</button>
-          <button class="modal-close" @click="showAdd = false">&times;</button>
+          <button v-if="editingIndex === -1" class="btn-clear" @click="clearDraft" title="清空表单">清空</button>
+          <button class="modal-close" @click="showAdd = false; editingIndex = -1">&times;</button>
         </div>
       </div>
       <div class="modal-body">
@@ -276,16 +306,16 @@
           <textarea v-model="form.note" placeholder="可选：简单描述当时情况"></textarea>
         </div>
         <button class="btn-submit" :disabled="submitting" @click="submitRecord">
-          {{ submitting ? '提交中...' : '提交到 GitHub' }}
+          {{ submitting ? '保存中...' : (editingIndex !== -1 ? '保存编辑' : '暂存记录') }}
         </button>
-        <span class="form-hint" style="text-align:center">{{ ghHint }}</span>
+        <span class="form-hint" style="text-align:center">{{ editingIndex !== -1 ? '修改将保存到本地' : '记录将暂存到本地，点提交到 GitHub 推送' }}</span>
       </div>
     </div>
   </div>
 
   <!-- ════════════ Settings Modal ════════════ -->
   <div class="modal-overlay" :class="{ open: showSettings }" @click.self="showSettings = false">
-    <div class="modal modal-wide">
+    <div class="modal modal-xl">
       <div class="modal-header">
         <h2>设置</h2>
         <button class="modal-close" @click="showSettings = false">&times;</button>
@@ -342,6 +372,24 @@
 
         </div>
 
+        <!-- 管理记录 -->
+        <div class="records-manage">
+          <div class="col-label">管理记录</div>
+          <input type="text" class="records-search" v-model="searchQuery" placeholder="搜索 ID 或备注...">
+          <div class="records-list">
+            <div v-for="(r, i) in filteredRecords" :key="i" class="record-row">
+              <span class="record-row-badge" :class="r.type === 'reverse' ? 'reverse' : 'smurf'">{{ r.type === 'reverse' ? '反' : '炸' }}</span>
+              <span class="record-row-date">{{ r.date }}</span>
+              <span class="record-row-id">{{ r.id }}</span>
+              <span v-if="r._pending" class="record-row-tag pending">NEW</span>
+              <span class="record-row-actions">
+                <button class="btn-row-action edit" @click="startEdit(i)" title="编辑">&#9998;</button>
+                <button class="btn-row-action delete" @click="deleteRecord(i)" title="删除">&times;</button>
+              </span>
+            </div>
+          </div>
+        </div>
+
         <button class="btn-submit" @click="saveSettings">保存设置</button>
       </div>
     </div>
@@ -355,6 +403,7 @@
 <script>
 const LS_GH  = "smurf_log_gh";
 const LS_FORM_DRAFT = "smurf_log_form_draft";
+const LS_STAGING = "smurf_log_staging";
 const GH_API = "https://api.github.com";
 
 const INLINE = [
@@ -401,6 +450,12 @@ createApp({
 
     const idInput    = ref(null);
 
+    // Staging
+    const staging = reactive({ sha: "", base: [], pending: [], edits: {}, deletes: [] });
+    const editingIndex = ref(-1);
+    const searchQuery  = ref("");
+    const submittingGh = ref(false);
+
     let toastTimer = null;
 
     /* ── Computed ── */
@@ -410,9 +465,18 @@ createApp({
     const ghDotTitle    = computed(() => ghConnected.value
       ? "GitHub 已连接 — "+gh.value.owner+"/"+gh.value.repo : "GitHub 未连接 — 点齿轮设置");
     const ghHint        = computed(() => ghConnected.value
-      ? "将写入 "+gh.value.owner+"/"+gh.value.repo+" → Pages 自动更新" : "需先配置 GitHub 设置（点右上角齿轮）");
+      ? "记录将暂存到本地，点 Header 提交按钮推送到 GitHub" : "需先配置 GitHub 设置（点右上角齿轮）");
     const testGhLabel   = computed(() => testingGh.value ? "测试中..." : testGhOk.value ? "GitHub ✓" : "测试 GitHub");
     const testPicLabel  = computed(() => testingPic.value ? "测试中..." : testPicOk.value ? "图床 ✓" : "测试图床");
+    const hasPending    = computed(() => staging.pending.length > 0 || Object.keys(staging.edits).length > 0 || staging.deletes.length > 0);
+    const pendingCount  = computed(() => staging.pending.length + Object.keys(staging.edits).length + staging.deletes.length);
+    const filteredRecords = computed(() => {
+      var q = searchQuery.value.trim().toLowerCase();
+      if (!q) return records.value;
+      return records.value.filter(function(r) {
+        return (r.id && r.id.toLowerCase().includes(q)) || (r.note && r.note.toLowerCase().includes(q));
+      });
+    });
 
     /* ── GitHub API ── */
     function ghHeaders(){
@@ -512,6 +576,32 @@ createApp({
       return[];
     }
 
+    /* ── Staging ── */
+    function saveStaging(){
+      try{localStorage.setItem(LS_STAGING,JSON.stringify({sha:staging.sha,base:staging.base,pending:staging.pending,edits:staging.edits,deletes:staging.deletes}))}catch(_){}
+    }
+    function loadStaging(){
+      try{
+        var d=JSON.parse(localStorage.getItem(LS_STAGING));
+        if(d){staging.sha=d.sha||"";staging.base=d.base||[];staging.pending=d.pending||[];staging.edits=d.edits||{};staging.deletes=d.deletes||[]}
+      }catch(_){}
+    }
+    function clearStaging(){
+      staging.sha="";staging.base=[];staging.pending=[];staging.edits={};staging.deletes=[];
+      try{localStorage.removeItem(LS_STAGING)}catch(_){}
+    }
+    function applyStaging(base){
+      var result=base.slice();
+      for(var k in staging.edits){var idx=parseInt(k);if(idx>=0&&idx<result.length){result[idx]=staging.edits[k]}}
+      staging.deletes.slice().sort(function(a,b){return b-a}).forEach(function(idx){if(idx>=0&&idx<result.length){result.splice(idx,1)}});
+      result=result.concat(staging.pending);
+      result.sort(function(a,b){if(a.date===b.date)return 0;return a.date<b.date?1:-1});
+      return result;
+    }
+    function refreshRecords(){
+      records.value=applyStaging(staging.base);
+    }
+
     /* ── Toast ── */
     function showToast(msg, type){
       toast.msg=msg;toast.type=type||"";toast.show=true;
@@ -566,18 +656,20 @@ createApp({
     async function loadRecords(){
       loading.value = true;
       try {
+        loadStaging();
         var data = null;
+        var sha = "";
         if(gh.value && gh.value.token){
-          try{var c=await ghGetFile();data=c.content}catch(e){console.warn("GitHub:",e.message)}
+          try{var c=await ghGetFile();data=c.content;sha=c.sha}catch(e){console.warn("GitHub:",e.message)}
         }
         if(!data){
           try{var r=await fetch("records.json?"+Date.now());if(r.ok){data=await r.json()}}catch(_){}
         }
         if(!data) data = INLINE;
-        records.value = data.slice().sort(function(a,b){
-          if(a.date===b.date)return 0;
-          return a.date<b.date?1:-1;
-        });
+        staging.base = data;
+        staging.sha = sha;
+        saveStaging();
+        refreshRecords();
       } finally {
         loading.value = false;
       }
@@ -590,6 +682,7 @@ createApp({
 
     /* ── Actions ── */
     function openAdd(){
+      editingIndex.value=-1;
       var draft = loadFormDraft();
       restoringDraft = true;
       form.date = draft ? draft.date || today() : today();
@@ -649,29 +742,85 @@ createApp({
       testingPic.value=false;
     }
     async function submitRecord(){
-      if(!gh.value){showToast("请先配置 GitHub 设置","error");return}
       if(!form.id.trim()){showToast("请填写炸鱼哥 ID","error");return}
       submitting.value=true;
       var imgs=form.images.trim();
       var record={date:form.date||today(),id:form.id.trim(),images:imgs?imgs.split(",").map(function(s){return s.trim()}):[],note:form.note.trim(),type:form.type||"smurf"};
-      try{
-        var c=await ghGetFile();
-        c.content.push(record);
-        c.content = c.content.slice().sort(function(a,b){
-          if(a.date===b.date)return 0;
-          return a.date<b.date?1:-1;
-        });
-        await ghPutFile(c.content,c.sha,"新增炸鱼记录: "+record.id);
-        records.value = c.content.slice();
-        clearFormDraft();
-        showAdd.value=false;
-        showToast("已提交 → "+gh.value.owner+"/"+gh.value.repo);
-      }catch(e){showToast("提交失败："+e.message,"error")}
+      var wasEdit=editingIndex.value>=0||editingIndex.value===-2;
+      if(editingIndex.value>=0){
+        staging.edits[editingIndex.value]=record;
+      }else if(editingIndex.value===-2){
+        var pi=-(editingIndex.value+2);
+        if(pi>=0&&pi<staging.pending.length){
+          record._pending=true;
+          staging.pending.splice(pi,1,record);
+        }
+      }else{
+        record._pending=true;
+        staging.pending.push(record);
+      }
+      saveStaging();
+      refreshRecords();
+      clearFormDraft();
+      showAdd.value=false;
+      editingIndex.value=-1;
+      showToast(wasEdit?"已保存编辑":"已暂存，点提交到 GitHub 推送");
       submitting.value=false;
     }
 
+    async function submitToGitHub(){
+      if(!gh.value||!gh.value.token){showToast("请先配置 GitHub 设置","error");return}
+      if(!hasPending.value){showToast("没有待提交的变更","error");return}
+      submittingGh.value=true;
+      try{
+        var c=await ghGetFile();
+        var merged=applyStaging(c.content);
+        var count=pendingCount.value;
+        await ghPutFile(merged,c.sha,"同步本地变更 ("+count+" 条)");
+        clearStaging();
+        staging.base=merged;
+        staging.sha="";
+        records.value=merged;
+        showToast("已提交 "+count+" 条变更到 GitHub");
+      }catch(e){showToast("提交失败："+e.message,"error")}
+      submittingGh.value=false;
+    }
+
+    function startEdit(idx){
+      var r=filteredRecords.value[idx];
+      if(!r)return;
+      if(r._pending){
+        editingIndex.value=-2;
+        var pi=staging.pending.indexOf(r);
+        if(pi>=0)editingIndex.value=-2-pi;
+      }else{
+        var bi=staging.base.indexOf(r);
+        editingIndex.value=bi>=0?bi:-1;
+      }
+      form.date=r.date||today();form.id=r.id||"";form.images=(r.images||[]).join(", ");form.note=r.note||"";form.type=r.type||"smurf";
+      showAdd.value=true;
+    }
+
+    function deleteRecord(idx){
+      var r=filteredRecords.value[idx];
+      if(!r)return;
+      if(r._pending){
+        var pi=staging.pending.indexOf(r);
+        if(pi>=0)staging.pending.splice(pi,1);
+      }else{
+        var bi=staging.base.indexOf(r);
+        if(bi>=0){
+          delete staging.edits[bi];
+          staging.deletes.push(bi);
+        }
+      }
+      saveStaging();
+      refreshRecords();
+      showToast("已标记删除: "+r.id);
+    }
+
     function onKeydown(e){
-      if(e.key==="Escape"){showAdd.value=false;showSettings.value=false}
+      if(e.key==="Escape"){showAdd.value=false;showSettings.value=false;editingIndex.value=-1}
     }
 
     /* ── Lifecycle ── */
@@ -688,8 +837,10 @@ createApp({
       form, ghForm, toast,
       selectedFiles, uploading, uploadProgress, uploadDone,
       ghConnected, piclistConfigured, ghDotClass, ghDotTitle, ghHint, testGhLabel, testPicLabel,
+      hasPending, pendingCount, filteredRecords, editingIndex, searchQuery, submittingGh, staging,
       idInput,
       openAdd, clearDraft, openSettings, saveSettings, testGhConnection, testPicConnection, submitRecord,
+      submitToGitHub, startEdit, deleteRecord,
       onFilesSelected, uploadToPiclist, onMasonryClick,
     };
   }
